@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PlayLength — YouTube Playlist Duration Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --red: #FF1744;
+    --red-dark: #C62828;
+    --red-muted: rgba(255,23,68,0.12);
+    --bg: #0A0A0A;
+    --bg-card: #111111;
+    --bg-card2: #181818;
+    --border: rgba(255,255,255,0.08);
+    --border-accent: rgba(255,23,68,0.3);
+    --text: #F5F5F5;
+    --text-muted: #888;
+    --text-dim: #555;
+    --mono: 'DM Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── GRID NOISE BACKGROUND ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,23,68,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,23,68,0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem 3rem;
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(8px);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+  }
+
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+    background: var(--red);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .logo-icon svg { width: 16px; height: 16px; fill: white; }
+
+  .logo-text {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+
+  .logo-text span { color: var(--red); }
+
+  .header-badge {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 100px;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+    padding: 5rem 2rem 3rem;
+  }
+
+  .hero-eyebrow {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.15em;
+    color: var(--red);
+    text-transform: uppercase;
+    margin-bottom: 1.25rem;
+  }
+
+  .hero h1 {
+    font-size: clamp(2.8rem, 6vw, 5rem);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.04em;
+    margin-bottom: 1.25rem;
+  }
+
+  .hero h1 em {
+    font-style: normal;
+    color: var(--red);
+  }
+
+  .hero p {
+    font-size: 1.05rem;
+    color: var(--text-muted);
+    max-width: 480px;
+    margin: 0 auto 2.5rem;
+    line-height: 1.6;
+    font-weight: 400;
+  }
+
+  /* ── MAIN CARD ── */
+  .main-card {
+    position: relative;
+    z-index: 10;
+    max-width: 760px;
+    margin: 0 auto 4rem;
+    padding: 0 1.5rem;
+  }
+
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+  }
+
+  .card-header {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .card-header-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  .dot-red { background: #FF5F57; }
+  .dot-yellow { background: #FFBD2E; }
+  .dot-green { background: #28C840; }
+
+  .card-header-label {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--text-dim);
+  }
+
+  .card-body { padding: 2rem; }
+
+  /* ── INPUT AREA ── */
+  .input-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 1rem;
+  }
+
+  .url-input {
+    flex: 1;
+    background: var(--bg-card2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.9rem 1.2rem;
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .url-input::placeholder { color: var(--text-dim); }
+  .url-input:focus { border-color: var(--border-accent); }
+
+  .btn-analyze {
+    background: var(--red);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 0.9rem 1.5rem;
+    font-family: var(--sans);
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-analyze:hover { background: #E53935; }
+  .btn-analyze:active { transform: scale(0.98); }
+  .btn-analyze:disabled { background: #333; color: var(--text-dim); cursor: not-allowed; }
+
+  .btn-analyze svg { width: 16px; height: 16px; }
+
+  .input-hint {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    margin-bottom: 1.5rem;
+  }
+
+  /* ── SPEED CONTROLS ── */
+  .section-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.75rem;
+  }
+
+  .speed-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .speed-btn {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    padding: 6px 14px;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .speed-btn:hover { border-color: var(--border-accent); color: var(--text); }
+  .speed-btn.active { background: var(--red-muted); border-color: var(--red); color: var(--red); }
+
+  /* ── LOADING ── */
+  .loading-state {
+    display: none;
+    text-align: center;
+    padding: 3rem 0;
+  }
+
+  .loading-state.visible { display: block; }
+
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 2px solid var(--border);
+    border-top-color: var(--red);
+    border-radius: 50%;
+    margin: 0 auto 1rem;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-text {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  .loading-progress {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--red);
+    margin-top: 0.5rem;
+  }
+
+  /* ── ERROR ── */
+  .error-state {
+    display: none;
+    background: rgba(255,23,68,0.08);
+    border: 1px solid rgba(255,23,68,0.25);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    margin-top: 1rem;
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    color: #FF6B6B;
+  }
+
+  .error-state.visible { display: block; }
+
+  /* ── RESULTS ── */
+  .results-state {
+    display: none;
+  }
+
+  .results-state.visible { display: block; }
+
+  .playlist-meta {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 2rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .playlist-thumb {
+    width: 72px;
+    height: 50px;
+    border-radius: 8px;
+    object-fit: cover;
+    background: var(--bg-card2);
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .playlist-thumb-placeholder {
+    width: 72px;
+    height: 50px;
+    border-radius: 8px;
+    background: var(--bg-card2);
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .playlist-thumb-placeholder svg { width: 24px; height: 24px; fill: var(--text-dim); }
+
+  .playlist-info { flex: 1; min-width: 0; }
+
+  .playlist-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .playlist-channel {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  /* ── STAT GRID ── */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 2rem;
+  }
+
+  .stat-card {
+    background: var(--bg-card2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.1rem 1.2rem;
+  }
+
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+
+  .stat-value {
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .stat-value.accent { color: var(--red); }
+  .stat-sub {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  /* ── SPEED TABLE ── */
+  .speed-table-wrap {
+    background: var(--bg-card2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 2rem;
+  }
+
+  .speed-table-title {
+    padding: 0.85rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+
+  .speed-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .speed-table th, .speed-table td {
+    padding: 0.7rem 1.25rem;
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+  }
+
+  .speed-table th {
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .speed-table td { color: var(--text-muted); border-bottom: 1px solid rgba(255,255,255,0.03); }
+  .speed-table tr:last-child td { border-bottom: none; }
+  .speed-table tr.highlight td { color: var(--red); background: var(--red-muted); }
+  .speed-table td:last-child { color: var(--text); }
+
+  /* ── PROGRESS BAR ── */
+  .watch-progress {
+    margin-bottom: 2rem;
+  }
+
+  .progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .progress-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .progress-pct {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--text-dim);
+  }
+
+  .progress-input-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 0.75rem;
+  }
+
+  .progress-slider {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border);
+    outline: none;
+  }
+
+  .progress-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--red);
+    cursor: pointer;
+  }
+
+  .progress-bar-track {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--red);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+  }
+
+  .progress-remaining {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 0.5rem;
+  }
+
+  .progress-remaining span { color: var(--text); font-weight: 500; }
+
+  /* ── FOOTER ── */
+  footer {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+    padding: 2rem;
+    border-top: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--text-dim);
+  }
+
+  footer a { color: var(--text-muted); text-decoration: none; }
+  footer a:hover { color: var(--red); }
+
+  /* ── API KEY MODAL ── */
+  .api-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+
+  .api-modal-overlay.visible { display: flex; }
+
+  .api-modal {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2rem;
+    width: 90%;
+    max-width: 480px;
+  }
+
+  .api-modal h2 {
+    font-size: 1.2rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+  }
+
+  .api-modal p {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 1.25rem;
+    line-height: 1.5;
+  }
+
+  .api-modal a { color: var(--red); }
+
+  .api-key-input {
+    width: 100%;
+    background: var(--bg-card2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    color: var(--text);
+    outline: none;
+    margin-bottom: 1rem;
+    transition: border-color 0.2s;
+  }
+
+  .api-key-input:focus { border-color: var(--border-accent); }
+  .api-key-input::placeholder { color: var(--text-dim); }
+
+  .api-modal-btns {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn-save-key {
+    flex: 1;
+    background: var(--red);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 0.75rem;
+    font-family: var(--sans);
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .btn-save-key:hover { background: #E53935; }
+
+  .btn-skip {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    font-family: var(--sans);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-skip:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+
+  /* ── DEMO MODE BANNER ── */
+  .demo-banner {
+    background: rgba(255,189,46,0.08);
+    border: 1px solid rgba(255,189,46,0.2);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: #FFBD2E;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .demo-banner svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+  .demo-banner a {
+    color: #FFBD2E;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  /* ── KEY INDICATOR ── */
+  .key-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+
+  .key-indicator:hover { color: var(--text-muted); }
+  .key-indicator.has-key { color: #28C840; }
+  .key-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-dim); }
+  .key-indicator.has-key .key-dot { background: #28C840; }
+
+  /* RESPONSIVE */
+  @media (max-width: 600px) {
+    header { padding: 1rem 1.25rem; }
+    .hero { padding: 3rem 1.25rem 2rem; }
+    .card-body { padding: 1.25rem; }
+    .input-group { flex-direction: column; }
+    .btn-analyze { justify-content: center; }
+    .stat-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- API Key Modal -->
+<div class="api-modal-overlay" id="apiModal">
+  <div class="api-modal">
+    <h2>YouTube API Key</h2>
+    <p>
+      To fetch real playlist data, you need a free YouTube Data API v3 key.
+      <a href="https://console.cloud.google.com/apis/library/youtube.googleapis.com" target="_blank">Get one free here</a> — takes about 2 minutes.
+      <br><br>
+      Your key is stored only in your browser's localStorage and never sent anywhere except YouTube's official API.
+    </p>
+    <input type="text" class="api-key-input" id="apiKeyInput" placeholder="AIzaSy..." />
+    <div class="api-modal-btns">
+      <button class="btn-save-key" onclick="saveApiKey()">Save & Continue</button>
+      <button class="btn-skip" onclick="skipApiKey()">Demo Mode</button>
+    </div>
+  </div>
+</div>
+
+<!-- Header -->
+<header>
+  <a class="logo" href="#">
+    <div class="logo-icon">
+      <svg viewBox="0 0 16 16"><path d="M6 4l6 4-6 4V4z"/></svg>
+    </div>
+    <span class="logo-text">Play<span>Length</span></span>
+  </a>
+  <div style="display:flex;align-items:center;gap:1rem;">
+    <div class="key-indicator" id="keyIndicator" onclick="openApiModal()">
+      <div class="key-dot"></div>
+      <span id="keyLabel">Add API Key</span>
+    </div>
+    <div class="header-badge">v1.0</div>
+  </div>
+</header>
+
+<!-- Hero -->
+<section class="hero">
+  <p class="hero-eyebrow">YouTube Playlist Calculator</p>
+  <h1>How long is<br>your <em>playlist?</em></h1>
+  <p>Paste a YouTube playlist URL. Get the total duration, video count, and adjusted watch times at every playback speed.</p>
+</section>
+
+<!-- Main Card -->
+<div class="main-card">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-dot dot-red"></div>
+      <div class="card-header-dot dot-yellow"></div>
+      <div class="card-header-dot dot-green"></div>
+      <span class="card-header-label">playlist-analyzer.js</span>
+    </div>
+    <div class="card-body">
+
+      <!-- Demo Banner (shown in demo mode) -->
+      <div class="demo-banner" id="demoBanner" style="display:none;">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 3a.75.75 0 110 1.5A.75.75 0 018 4zm0 3a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 018 7z"/></svg>
+        Demo mode — showing sample data. <a onclick="openApiModal()">Add your API key</a> to fetch real playlists.
+      </div>
+
+      <!-- Input -->
+      <div class="input-group">
+        <input
+          type="text"
+          class="url-input"
+          id="urlInput"
+          placeholder="https://www.youtube.com/playlist?list=PLxxxxxxxx"
+        />
+        <button class="btn-analyze" id="analyzeBtn" onclick="analyze()">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M6 4l6 4-6 4V4z"/></svg>
+          Analyze
+        </button>
+      </div>
+      <p class="input-hint">Accepts playlist URLs, short URLs, and playlist IDs directly.</p>
+
+      <!-- Speed selector -->
+      <p class="section-label">Playback speed</p>
+      <div class="speed-row" id="speedRow">
+        <button class="speed-btn" data-speed="0.5" onclick="setSpeed(this)">0.5×</button>
+        <button class="speed-btn" data-speed="0.75" onclick="setSpeed(this)">0.75×</button>
+        <button class="speed-btn active" data-speed="1" onclick="setSpeed(this)">1×</button>
+        <button class="speed-btn" data-speed="1.25" onclick="setSpeed(this)">1.25×</button>
+        <button class="speed-btn" data-speed="1.5" onclick="setSpeed(this)">1.5×</button>
+        <button class="speed-btn" data-speed="1.75" onclick="setSpeed(this)">1.75×</button>
+        <button class="speed-btn" data-speed="2" onclick="setSpeed(this)">2×</button>
+      </div>
+
+      <!-- Loading -->
+      <div class="loading-state" id="loadingState">
+        <div class="spinner"></div>
+        <p class="loading-text">Fetching playlist data…</p>
+        <p class="loading-progress" id="loadingProgress"></p>
+      </div>
+
+      <!-- Error -->
+      <div class="error-state" id="errorState"></div>
+
+      <!-- Results -->
+      <div class="results-state" id="resultsState">
+
+        <!-- Playlist meta -->
+        <div class="playlist-meta">
+          <div class="playlist-thumb-placeholder" id="thumbWrap">
+            <svg viewBox="0 0 24 24"><path d="M15 10l-8 4.5V5.5L15 10z"/></svg>
+          </div>
+          <div class="playlist-info">
+            <div class="playlist-title" id="playlistTitle">—</div>
+            <div class="playlist-channel" id="playlistChannel">—</div>
+          </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-label">Total Duration</div>
+            <div class="stat-value accent" id="statTotal">—</div>
+            <div class="stat-sub" id="statTotalSub"></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">At <span id="statSpeedLabel">1×</span> speed</div>
+            <div class="stat-value" id="statAdjusted">—</div>
+            <div class="stat-sub" id="statAdjustedSub"></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Videos</div>
+            <div class="stat-value" id="statVideos">—</div>
+            <div class="stat-sub" id="statVideoSub">in playlist</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Avg per video</div>
+            <div class="stat-value" id="statAvg">—</div>
+            <div class="stat-sub">per video</div>
+          </div>
+        </div>
+
+        <!-- Speed table -->
+        <div class="speed-table-wrap">
+          <div class="speed-table-title">Duration at all speeds</div>
+          <table class="speed-table">
+            <thead>
+              <tr>
+                <th>Speed</th>
+                <th>Duration</th>
+                <th>vs 1× Speed</th>
+              </tr>
+            </thead>
+            <tbody id="speedTableBody"></tbody>
+          </table>
+        </div>
+
+        <!-- Watch progress -->
+        <div class="watch-progress">
+          <div class="progress-header">
+            <p class="section-label">Where am I in the playlist?</p>
+            <span class="progress-pct" id="progressPct">0%</span>
+          </div>
+          <div class="progress-input-row">
+            <input
+              type="range"
+              class="progress-slider"
+              id="progressSlider"
+              min="0" max="100" value="0" step="1"
+              oninput="updateProgress(this.value)"
+            />
+          </div>
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" id="progressBarFill" style="width:0%"></div>
+          </div>
+          <p class="progress-remaining" id="progressRemaining"></p>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Footer -->
+<footer>
+  <p>PlayLength — uses YouTube Data API v3 · your API key stays in your browser · <a href="https://developers.google.com/youtube/v3/docs/playlistItems/list" target="_blank">API docs</a></p>
+</footer>
+
+<script>
+// ── STATE ──
+let apiKey = localStorage.getItem('yt_api_key') || '';
+let currentSpeed = 1;
+let totalSeconds = 0;
+let videoCount = 0;
+let isDemo = false;
+
+// ── INIT ──
+window.onload = () => {
+  updateKeyIndicator();
+  if (!apiKey) openApiModal();
+};
+
+// ── API KEY ──
+function openApiModal() {
+  document.getElementById('apiModal').classList.add('visible');
+  document.getElementById('apiKeyInput').value = apiKey;
+}
+
+function saveApiKey() {
+  const val = document.getElementById('apiKeyInput').value.trim();
+  if (!val) { alert('Please enter a valid API key.'); return; }
+  apiKey = val;
+  localStorage.setItem('yt_api_key', apiKey);
+  document.getElementById('apiModal').classList.remove('visible');
+  isDemo = false;
+  document.getElementById('demoBanner').style.display = 'none';
+  updateKeyIndicator();
+}
+
+function skipApiKey() {
+  document.getElementById('apiModal').classList.remove('visible');
+  isDemo = true;
+  document.getElementById('demoBanner').style.display = 'flex';
+  updateKeyIndicator();
+}
+
+function updateKeyIndicator() {
+  const el = document.getElementById('keyIndicator');
+  const label = document.getElementById('keyLabel');
+  if (apiKey) {
+    el.classList.add('has-key');
+    label.textContent = 'API Key ✓';
+  } else {
+    el.classList.remove('has-key');
+    label.textContent = 'Add API Key';
+  }
+}
+
+// ── EXTRACT PLAYLIST ID ──
+function extractPlaylistId(input) {
+  input = input.trim();
+  const urlMatch = input.match(/[?&]list=([a-zA-Z0-9_-]+)/);
+  if (urlMatch) return urlMatch[1];
+  if (/^[a-zA-Z0-9_-]{10,}$/.test(input)) return input;
+  return null;
+}
+
+// ── PARSE ISO 8601 DURATION ──
+function parseISO8601Duration(d) {
+  const m = d.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!m) return 0;
+  return (parseInt(m[1]||0)*3600) + (parseInt(m[2]||0)*60) + parseInt(m[3]||0);
+}
+
+// ── FORMAT SECONDS ──
+function fmtSeconds(s) {
+  s = Math.round(s);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (h > 0) return `${h}h ${m}m ${sec}s`;
+  if (m > 0) return `${m}m ${sec}s`;
+  return `${sec}s`;
+}
+
+function fmtHuman(s) {
+  s = Math.round(s);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  if (h > 0 && m > 0) return `${h} hr ${m} min`;
+  if (h > 0) return `${h} hr`;
+  return `${m} min`;
+}
+
+// ── SET SPEED ──
+function setSpeed(btn) {
+  document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentSpeed = parseFloat(btn.dataset.speed);
+  if (totalSeconds > 0) renderResults();
+}
+
+// ── ANALYZE ──
+async function analyze() {
+  const raw = document.getElementById('urlInput').value.trim();
+  if (!raw) { showError('Please paste a YouTube playlist URL.'); return; }
+
+  const playlistId = extractPlaylistId(raw);
+  if (!playlistId) { showError('Could not find a playlist ID. Make sure the URL contains ?list=...'); return; }
+
+  if (isDemo || !apiKey) {
+    loadDemoData(playlistId);
+    return;
+  }
+
+  setLoading(true);
+  showError('');
+  hideResults();
+
+  try {
+    const { videos, title, channel, thumb } = await fetchPlaylist(playlistId);
+    totalSeconds = videos.reduce((a, v) => a + v.dur, 0);
+    videoCount = videos.length;
+    renderResults({ title, channel, thumb });
+  } catch (e) {
+    showError(e.message || 'Failed to fetch playlist. Check your API key and playlist visibility.');
+  } finally {
+    setLoading(false);
+  }
+}
+
+// ── FETCH PLAYLIST ──
+async function fetchPlaylist(playlistId) {
+  let videos = [];
+  let pageToken = '';
+  let title = '', channel = '', thumb = '';
+  let page = 0;
+
+  do {
+    page++;
+    document.getElementById('loadingProgress').textContent =
+      `Fetching page ${page}… (${videos.length} videos so far)`;
+
+    const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=contentDetails,snippet&maxResults=50&playlistId=${playlistId}${pageToken ? '&pageToken=' + pageToken : ''}&key=${apiKey}`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (data.error) throw new Error(data.error.message);
+
+    if (page === 1) {
+      title = data.items?.[0]?.snippet?.channelTitle || 'YouTube Playlist';
+      channel = '';
+      thumb = data.items?.[0]?.snippet?.thumbnails?.medium?.url || '';
+    }
+
+    const videoIds = data.items.map(i => i.contentDetails.videoId).join(',');
+
+    // Fetch durations
+    const vRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=contentDetails,snippet&id=${videoIds}&key=${apiKey}`);
+    const vData = await vRes.json();
+
+    if (page === 1 && vData.items?.[0]) {
+      channel = vData.items[0].snippet?.channelTitle || '';
+    }
+
+    for (const v of (vData.items || [])) {
+      videos.push({ dur: parseISO8601Duration(v.contentDetails?.duration || '') });
+    }
+
+    // Fetch playlist title separately on first page
+    if (page === 1) {
+      try {
+        const pRes = await fetch(`https://www.googleapis.com/youtube/v3/playlists?part=snippet&id=${playlistId}&key=${apiKey}`);
+        const pData = await pRes.json();
+        title = pData.items?.[0]?.snippet?.title || title;
+        channel = pData.items?.[0]?.snippet?.channelTitle || channel;
+        thumb = pData.items?.[0]?.snippet?.thumbnails?.medium?.url || thumb;
+      } catch {}
+    }
+
+    pageToken = data.nextPageToken || '';
+  } while (pageToken);
+
+  return { videos, title, channel, thumb };
+}
+
+// ── DEMO DATA ──
+function loadDemoData(id) {
+  totalSeconds = 84923; // ~23.5 hours
+  videoCount = 247;
+  renderResults({
+    title: 'Sample Playlist (Demo Mode)',
+    channel: 'Demo Channel',
+    thumb: ''
+  });
+}
+
+// ── RENDER RESULTS ──
+function renderResults({ title, channel, thumb } = {}) {
+  document.getElementById('playlistTitle').textContent = title || 'Untitled Playlist';
+  document.getElementById('playlistChannel').textContent = channel ? `by ${channel}` : '';
+
+  const thumbWrap = document.getElementById('thumbWrap');
+  if (thumb) {
+    thumbWrap.innerHTML = `<img src="${thumb}" class="playlist-thumb" alt="thumbnail">`;
+  } else {
+    thumbWrap.innerHTML = `<div class="playlist-thumb-placeholder"><svg viewBox="0 0 24 24" fill="var(--text-dim)" style="width:24px;height:24px;"><path d="M15 10l-8 4.5V5.5L15 10z"/></svg></div>`;
+  }
+
+  const adjusted = totalSeconds / currentSpeed;
+  const avg = videoCount > 0 ? totalSeconds / videoCount : 0;
+
+  document.getElementById('statTotal').textContent = fmtHuman(totalSeconds);
+  document.getElementById('statTotalSub').textContent = fmtSeconds(totalSeconds);
+  document.getElementById('statSpeedLabel').textContent = `${currentSpeed}×`;
+  document.getElementById('statAdjusted').textContent = fmtHuman(adjusted);
+  document.getElementById('statAdjustedSub').textContent = fmtSeconds(adjusted);
+  document.getElementById('statVideos').textContent = videoCount.toLocaleString();
+  document.getElementById('statVideoSub').textContent = `${videoCount === 1 ? 'video' : 'videos'} in playlist`;
+  document.getElementById('statAvg').textContent = fmtSeconds(avg);
+
+  // Speed table
+  const speeds = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+  const base = totalSeconds;
+  const tbody = document.getElementById('speedTableBody');
+  tbody.innerHTML = speeds.map(sp => {
+    const dur = base / sp;
+    const saved = base - dur;
+    const highlight = sp === currentSpeed;
+    const savings = sp > 1
+      ? `−${fmtHuman(Math.abs(saved))} saved`
+      : sp < 1
+        ? `+${fmtHuman(Math.abs(saved))} more`
+        : '—';
+    return `<tr class="${highlight ? 'highlight' : ''}">
+      <td>${sp}×${highlight ? ' ◀' : ''}</td>
+      <td>${fmtHuman(dur)}</td>
+      <td>${savings}</td>
+    </tr>`;
+  }).join('');
+
+  // Reset progress
+  document.getElementById('progressSlider').value = 0;
+  updateProgress(0);
+
+  document.getElementById('resultsState').classList.add('visible');
+}
+
+function updateProgress(pct) {
+  pct = parseInt(pct);
+  const watched = totalSeconds * (pct / 100);
+  const remaining = totalSeconds - watched;
+  const adjRemaining = remaining / currentSpeed;
+
+  document.getElementById('progressPct').textContent = pct + '%';
+  document.getElementById('progressBarFill').style.width = pct + '%';
+  document.getElementById('progressSlider').value = pct;
+  document.getElementById('progressRemaining').innerHTML =
+    `<span>${fmtHuman(adjRemaining)}</span> remaining at ${currentSpeed}× speed · watched <span>${fmtHuman(watched)}</span>`;
+}
+
+// ── UI HELPERS ──
+function setLoading(v) {
+  document.getElementById('loadingState').classList.toggle('visible', v);
+  document.getElementById('analyzeBtn').disabled = v;
+  if (!v) document.getElementById('loadingProgress').textContent = '';
+}
+
+function showError(msg) {
+  const el = document.getElementById('errorState');
+  el.textContent = msg;
+  el.classList.toggle('visible', !!msg);
+}
+
+function hideResults() {
+  document.getElementById('resultsState').classList.remove('visible');
+}
+
+// Enter key
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('urlInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') analyze();
+  });
+});
+</script>
+</body>
+</html>
